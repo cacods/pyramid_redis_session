@@ -128,7 +128,7 @@ def RedisSessionFactory(**options):
                 self.__init_rd()
                 data = self.rd.get(self.__key())
                 if data is not None:
-                    self._data = msgpack.unpackb(data, use_list=True, encoding='utf-8')
+                    self._data = msgpack.unpackb(data, use_list=False, encoding='utf-8')
                 else:
                     self._data = {}
 
