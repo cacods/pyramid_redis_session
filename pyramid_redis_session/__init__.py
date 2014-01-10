@@ -268,7 +268,13 @@ def RedisSessionFactory(**options):
 
         def setdefault(self, key, default=None):
             """D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D"""
-            pass
+            self.__load()
+            if key in self._data:
+                return self._data[key]
+            else:
+                self._data[key] = default
+                self._changed = True
+                return default
 
         def pop(self, k, *args):
             """remove specified key and return the corresponding value
