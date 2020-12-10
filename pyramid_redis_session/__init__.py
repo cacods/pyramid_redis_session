@@ -9,7 +9,7 @@ import msgpack
 from pyramid.interfaces import ISession
 from pyramid.settings import asbool
 from redis.client import StrictRedis
-from zope.interface import implements
+from zope.interface import implementer
 
 
 getpid = hasattr(os, 'getpid') and os.getpid or (lambda: '')
@@ -51,8 +51,8 @@ def RedisSessionFactory(**options):
     _options['_increase_expire_mod'] = int(_options.get('increase_expire_mod', 10))
     _options['_path'] = _options.get('path', '/')
 
+    @implementer(ISession)
     class RedisSessionObject():
-        implements(ISession)
 
         def __init__(self, request):
             self._options = _options
@@ -138,7 +138,8 @@ def RedisSessionFactory(**options):
                 self.rd.setex(self.__key(), self._options['_expire'], msgpack.packb(self._data, encoding='utf-8'))
 
         def __create_id(self):
-            self.id = hashlib.sha1(hashlib.sha1("%f%s%f%s" % (time.time(), id({}), random.random(), getpid())).hexdigest(), ).hexdigest()
+            self.id = hashlib.sha1((hashlib.sha1(
+                ("%f%s%f%s" % (time.time(), id({}), random.random(), getpid())).encode('utf-8')).hexdigest(), )[0].encode('utf-8')).hexdigest()
 
         def init_with_id(self, session_id):
             """
