@@ -1,15 +1,15 @@
-from Cookie import SimpleCookie
+from http.cookies import SimpleCookie
 import hashlib
 import random
 import os
-from urlparse import urlparse
+from urllib.parse import urlparse
 import time
 
 import msgpack
 from pyramid.interfaces import ISession
 from pyramid.settings import asbool
 from redis.client import StrictRedis
-from zope.interface import implements
+from zope.interface import implementer
 
 
 getpid = hasattr(os, 'getpid') and os.getpid or (lambda: '')
@@ -51,8 +51,8 @@ def RedisSessionFactory(**options):
     _options['_increase_expire_mod'] = int(_options.get('increase_expire_mod', 10))
     _options['_path'] = _options.get('path', '/')
 
+    @implementer(ISession)
     class RedisSessionObject():
-        implements(ISession)
 
         def __init__(self, request):
             self._options = _options
@@ -138,7 +138,8 @@ def RedisSessionFactory(**options):
                 self.rd.setex(self.__key(), self._options['_expire'], msgpack.packb(self._data, encoding='utf-8'))
 
         def __create_id(self):
-            self.id = hashlib.sha1(hashlib.sha1("%f%s%f%s" % (time.time(), id({}), random.random(), getpid())).hexdigest(), ).hexdigest()
+            self.id = hashlib.sha1((hashlib.sha1(
+                ("%f%s%f%s" % (time.time(), id({}), random.random(), getpid())).encode('utf-8')).hexdigest(), )[0].encode('utf-8')).hexdigest()
 
         def init_with_id(self, session_id):
             """
@@ -227,27 +228,27 @@ def RedisSessionFactory(**options):
 
         def keys(self):
             self.__load()
-            return self._data.keys()
+            return list(self._data.keys())
 
         def values(self):
             self.__load()
-            return self._data.values()
+            return list(self._data.values())
 
         def items(self):
             self.__load()
-            return self._data.items()
+            return list(self._data.items())
 
         def iterkeys(self):
             self.__load()
-            return iter(self._data.keys())
+            return iter(list(self._data.keys()))
 
         def itervalues(self):
             self.__load()
-            return iter(self._data.values())
+            return iter(list(self._data.values()))
 
         def iteritems(self):
             self.__load()
-            return iter(self._data.items())
+            return iter(list(self._data.items()))
 
         def clear(self):
             self.__load()
@@ -256,13 +257,13 @@ def RedisSessionFactory(**options):
 
         def update(self, d):
             self.__load()
-            for k in self._data.keys():
+            for k in list(self._data.keys()):
                 d[k] = self._data[k]
 
         def multi_set(self, d):
 #            print '[update]', self.id
             self.__load()
-            for k in d.keys():
+            for k in list(d.keys()):
                 self._data[k] = d[k]
             self._changed = True
 
@@ -294,7 +295,7 @@ def RedisSessionFactory(**options):
 
 
         def __iter__(self):
-            return self.iterkeys()
+            return iter(self.keys())
 
         def __contains__(self, key):
             self.__load()
@@ -314,7 +315,7 @@ def session_factory_from_settings(settings):
     options = {}
 
     # Pull out any config args meant for redis session. if there are any
-    for k, v in settings.items():
+    for k, v in list(settings.items()):
         for prefix in prefixes:
             if k.startswith(prefix):
                 option_name = k[len(prefix):]
